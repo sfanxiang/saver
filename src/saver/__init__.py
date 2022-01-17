@@ -48,7 +48,7 @@ class Saver():
             ret = f(*args, **kwargs)
             if ret is None:
                 break
-            f, args, kwargs = ret
+            f, args, kwargs, options = ret
 
             # Remove skipped args/kwargs.
             assert(len(args) >= self._skip_args)
@@ -58,8 +58,14 @@ class Saver():
                 if kw not in self._skip_kwargs:
                     saved_kwargs[kw] = kwargs[kw]
 
+            if options.get('overwrite', False) and self._next_version > 0:
+                self._next_version -= 1 # Overwrite previous version.
+
             self._ls.save(self._path, self._next_version, f, saved_args, saved_kwargs)
             self._next_version += 1
 
 def call(*args, **kwargs):
-    return args[0], args[1:], kwargs
+    return args[0], args[1:], kwargs, {}
+
+def call_overwrite(*args, **kwargs):
+    return args[0], args[1:], kwargs, {'overwrite': True}
