@@ -8,10 +8,13 @@ import torch
 from typing import Any, Callable, Optional, Tuple
 
 class LoadSave(LoadSaveInterface):
+    def __init__(self, prefix='saver'):
+        assert('.' not in prefix)
+        self._prefix = prefix
+
     def load(self, path: str) -> Optional[Tuple[int, Callable, Any, Any]]:
         saves = os.listdir(path)
-        saves = [(int(x.replace('.', '_').split('_')[1]), x) for x in saves
-                 if x.startswith('saver_')]
+        saves = [(int(x.split('.')[1]), x) for x in saves if x.startswith(f'{self._prefix}.')]
         saves.sort()
 
         if not saves:
@@ -20,15 +23,19 @@ class LoadSave(LoadSaveInterface):
         return (saves[-1][0], *torch.load(path + '/' + saves[-1][1]))
 
     def save(self, path: str, version: int, f: Callable, args: Any, kwargs: Any):
-        torch.save((f, args, kwargs), f'{path}/saver-tmp.pt')
-        os.rename(f'{path}/saver-tmp.pt', f'{path}/saver_{version}.pt')
+        torch.save((f, args, kwargs), f'{path}/{self._prefix}-tmp.pt')
+        os.rename(f'{path}/{self._prefix}-tmp.pt', f'{path}/{self._prefix}.{version}.pt')
 
 class LoadSaveWithoutVersion(LoadSaveInterface):
+    def __init__(self, prefix='saver'):
+        assert('.' not in prefix)
+        self._prefix = prefix
+
     def load(self, path: str) -> Optional[Tuple[int, Callable, Any, Any]]:
-        if not os.path.exists(f'{path}/saver.pt'):
+        if not os.path.exists(f'{path}/{self._prefix}.pt'):
             return None
-        return (0, *torch.load(f'{path}/saver.pt'))
+        return (0, *torch.load(f'{path}/{self._prefix}.pt'))
 
     def save(self, path: str, version: int, f: Callable, args: Any, kwargs: Any):
-        torch.save((f, args, kwargs), f'{path}/saver-tmp.pt')
-        os.replace(f'{path}/saver-tmp.pt', f'{path}/saver.pt')
+        torch.save((f, args, kwargs), f'{path}/{self._prefix}-tmp.pt')
+        os.replace(f'{path}/{self._prefix}-tmp.pt', f'{path}/{self._prefix}.pt')
